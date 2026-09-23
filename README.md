@@ -135,8 +135,8 @@ suvcontrol-core/
 
 ---
 
-## 👥 Muallif
+## 👥 Muallif / Authors
 
-* **Abdulloh Munzir** — Bosh tizim arxitektori va Full-Stack dasturchi
+* **Sharipov Bahodir** — Loyiha muallifi va Bosh tizim arxitektori (Project Author & Lead Architect)
 * Loyiha: **SuvControl**
 * Repozitoriya: [github.com/AbdullohMunzir/suvcontrol-core](https://github.com/AbdullohMunzir/suvcontrol-core)

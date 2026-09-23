@@ -2,7 +2,7 @@
   "name": "suvcontrol-frontend-core",
   "version": "1.0.0-hackathon-preview",
   "description": "SuvControl Core Architecture — Modern UI Components & Official Document Engines",
-  "author": "Abdulloh Munzir",
+  "author": "Sharipov Bahodir",
   "private": true,
   "scripts": {
     "info": "echo 'SuvControl Frontend Core Architecture Preview for Hackathon Evaluation'"
