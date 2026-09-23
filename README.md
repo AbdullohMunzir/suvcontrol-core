@@ -1,7 +1,7 @@
 <div align="center">
 
-# 💧 SuvControl Core Architecture
-### Next-Generation Enterprise Water Utility Billing & Resource Governance Platform
+# 💧 SuvControl — Enterprise Water Utility ERP & Billing Platform
+### National Scale Multi-Tenant Digital Infrastructure for Municipal & Regional Water Authorities
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-10.0+-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)](https://nestjs.com/)
@@ -16,144 +16,127 @@
 
 ---
 
-## 📌 Executive Summary
+## 📌 Loyiha Haqida / Executive Summary
 
-**SuvControl** is an enterprise-scale digital billing, smart metering, and automated revenue-assurance platform designed specifically for municipal and regional water utility authorities (*O'zsuvta'minot* ecosystems).
+**SuvControl** — bu O‘zbekiston Respublikasi suv ta’minoti korxonalari (*O‘zsuvta’minot* tizimi, viloyat va tuman suv ta’minoti korxonalari) uchun maxsus ishlab chiqilgan, barcha turdagi iste’molchilarni (Aholi va Yuridik shaxslar), nazoratchilar tarmog‘ini, to‘lov tizimlarini va moliyaviy hisobotlarni yagona avtomatlashtirilgan markazga birlashtiruvchi **yaxlit korporativ ERP & Billing platformasi**.
 
-In Uzbekistan, water utilities face major systemic challenges:
-1. **Non-Revenue Water (NRW) & Unmetered Tampering**: Billions of sums lost annually due to illegal tapping and unverified meters.
-2. **B2B & Budget Organization Overspending**: State entities (schools, kindergartens, hospitals) exceeding approved budgetary limits without proactive warning.
-3. **Manual Invoicing Latency**: Days spent preparing paper acts, manual E-faktura reconciliation, and bilateral debt audits (*Akt-sverka*).
-
-**SuvControl** solves this through an end-to-end multi-tenant platform featuring automated pipe-diameter sanction engines, live Didox 12% VAT electronic invoice integration, 4-tier B2B hierarchy, and automated debt reconciliation.
+Tizim shunchaki hisoblagich ko‘rsatkichini yozib borish vositasi emas, balki suv resurslarini boshqarish, noqonuniy ulanishlarga chek qo‘yish, debitorlik qarzdorligini qisqartirish va to‘lovlarni 100% raqamlashtirishning to‘liq siklini ta’minlaydi.
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ Tizimning 7 Ta Asosiy Ustuni / The 7 Pillars of SuvControl
 
 ```mermaid
 graph TD
-    subgraph Frontend ["Frontend Presentation Tier (React 19 / AntD / Tailwind)"]
-        UI["B2B Enterprise Portal"]
-        DocsGen["Official Document Generators (EHF, Akt-Sverka, Dalolatnoma)"]
-        ExcelExport["Didox / Soliq EHF Batch Export Engine"]
-    end
+    Platform["💧 SuvControl Yagona Billing & Boshqaruv Markazi"]
 
-    subgraph Gateway ["Reverse Proxy & Ingress"]
-        Nginx["Nginx SSL / Reverse Proxy"]
-    end
-
-    subgraph BackendCore ["Backend Application Tier (NestJS / TypeScript)"]
-        AuthModule["JWT Multi-Tenant RBAC/Guard"]
-        AbonentModule["Abonent & Hierarchy Controller"]
-        BillingModule["Billing & Ledger Engine"]
-        SanctionEngine["VMQ-194 Pipe Sanction Calculator"]
-        LimitEngine["Budget Limit & Early Warning Processor"]
-    end
-
-    subgraph DataTier ["Persistence Tier (PostgreSQL 16 + Redis 7)"]
-        PrismaORM["Prisma Multi-Tenant ORM"]
-        PostgresDB[("PostgreSQL 16 with RLS Data Isolation")]
-        RedisStore[("Redis Session & Token Cache")]
-    end
-
-    UI --> Gateway
-    DocsGen --> Gateway
-    Gateway --> BackendCore
-    BackendCore --> DataTier
+    Platform --> P1["1. Aholi (B2C) & Geografik Kadastr"]
+    Platform --> P2["2. Yuridik Shaxslar (B2B & Byudjet)"]
+    Platform --> P3["3. Inspektorlar & Mobil Kassa (ESC/POS)"]
+    Platform --> P4["4. FinTech & To'lov Shlyuzlari (Click, Payme, Paynet, Bank)"]
+    Platform --> P5["5. Qarzdorlik Undiruvi & Eskiz SMS"]
+    Platform --> P6["6. Hisoblagichlar & Davlat Qiyoslovi"]
+    Platform --> P7["7. Analitika, Audit & Davlat Hisobotlari"]
 ```
 
 ---
 
-## ⚡ Core Features & Capabilities
+### 1. 🏡 Aholi (B2C) va Geografik Kadastr
+* **Mahalla va Ko'cha Ierarxiyasi**: Tuman $\rightarrow$ Mahalla fuqarolar yig'ini $\rightarrow$ Ko'cha $\rightarrow$ Xonadon tuzilishi.
+* **Ko'p Pog'onali Ijtimoiy Tariflar**: Iste'mol hajmiga qarab progressiv tariflar hisob-kitobi.
+* **Abonentning To'liq Tarixi**: Har bir abonent bo'yicha ko'rsatkichlar dinamikasi, fotosuratlar, hisoblangan schyotlar va to'lovlar balansi.
+* **Retroaktiv Qayta Hisob-kitob**: Tarif o'zgarganda yoki xatolik tuzatilganda o'tgan davrlar uchun avtomatlashtirilgan qayta hisoblash (recalculation engine).
 
-### 1. 🏢 4-Tier B2B Consumer Hierarchy
-Unlike typical B2C residential billing, commercial and state institutions operate on a multi-level structure:
-$$\text{Parent Enterprise (STIR / INN)} \longrightarrow \text{Facilities (Branches / Schools)} \longrightarrow \text{Connection Points (Pipes)} \longrightarrow \text{Meters}$$
-* Supports sub-metering deduction (master meter minus tenant consumption).
-* Multi-branch aggregation for citywide department accounts.
+### 2. 🏢 Yuridik Shaxslar (B2B, Sanoat va Byudjet Tashkilotlari)
+* **4 Bo'g'inli Korxona Modeli**: Bosh korxona (STIR/INN) $\rightarrow$ Obyektlar/Filiallar $\rightarrow$ Ulanish nuqtalari (quvurlar) $\rightarrow$ Hisoblagichlar.
+* **O'zbekiston VMQ-194 Quvur Sanksiyasi Formulasi**: Tamg'a buzilganda quvur diametri va bosimi bo'yicha hisoblash:
+  $$Q = \pi \cdot \left(\frac{d}{2}\right)^2 \cdot v \cdot t$$
+* **G'aznachilik / UzASBO Nazorati**: 27 xonali g'azna hisoblari bo'yicha yillik va oylik limitlar monitoringi (80% xavf va 100% oshib ketish ogohlantirishlari).
+* **Didox va Soliq.uz EHF**: 12% QQS va MXIK kodi (`03600001001000000`) bilan oylik hisobvaraq-fakturalarni ommaviy Excel formatida generatsiya qilish.
+* **Rasmiy Hujjatlar Generatorlari**: Akt-sverka, Spravka-raschyot, Sanksiya dalolatnomasi, Sudgacha bo'lgan Pretenziya.
 
-### 2. ⚖️ Gosstandart VMQ-194 Pipe Capacity Sanction Engine
-When meter tampering, illegal bypassing, or seal integrity violations occur, the engine calculates volumetric debt based on national hydraulic norms:
-$$Q = \pi \cdot \left(\frac{d}{2}\right)^2 \cdot v \cdot t$$
-* **$d$**: Internal pipe diameter ($mm$)
-* **$v$**: Standard pressurized velocity ($1.2 \text{ m/s}$)
-* **$t$**: Violation duration in seconds
-* Generates an official, legally enforceable **Sanksiya Dalolatnomasi** with 12% VAT breakdown.
+### 3. 📱 Inspektorlar va Mobil Kassa (Field Agents & ESC/POS)
+* **Nazoratchilar Parki**: Tuman bo'yicha inspektorlar marshruti, biriktirilgan hududlar va kunlik reja.
+* **Portativ Termoprinter Cheki**: Joyning o'zida Bluetooth orqali 58mm/80mm termoprinterda QR-kodli to'lov va ko'rsatkich kvitansiyasini chop etish.
+* **Kunlik Inkassatsiya (Daily Settlement)**: Inspektor tomonidan yig'ilgan naqd pullarni kun yakunida kassaga topshirish va qabul qilish akti.
 
-### 3. 📑 Automated Official Document Engines
-* **E-Hisobvaraq Faktura (EHF)**: 12% QQS, MXIK (`03600001001000000`), E-IMZO stamp visualization.
-* **Akt-Sverka**: Bilateral ledger reconciliation between water authority and enterprise accounting.
-* **Spravka-Raschyot**: Formal tariff breakdowns for tax authorities.
-* **Pretenziya**: Pre-trial formal notification with statutory deadlines.
-* **Didox Batch Export**: One-click Excel compilation structured for Didox and Soliq.uz bulk import.
+### 4. 💳 FinTech & To'lov Tizimlari Kliringi
+* **Click Merchant & Click Pass**: Real vaqt rejimida abonent qarzini ko'rsatish va to'lovni avtomat qabul qilish.
+* **Payme Checkout**: QR-kod va abonent hisob raqami orqali onlayn to'lov integratsiyasi.
+* **Paynet Tranzaksiyalari**: Terminal va shoxobchalar orqali qabul qilingan to'lovlarni qayta ishlash.
+* **Bank Kliringi**: Bank to'lov topshirig'i (Platyojka) reestrini yuklab, tegishli korxona va abonentlarga biriktirish.
 
-### 4. 📊 Budget Limit Early-Warning Engine
-* Integrates 27-digit Single Treasury Accounts (*UzASBO / G'aznachilik*).
-* Monitors real-time consumption against annual and monthly quotas.
-* Triggers color-coded alerts at **80%** (Risk) and **100%** (Exceeded/Perebor).
+### 5. ⚖️ Qarzdorlik Undiruvi & SMS E-Ogohlantirish
+* **Eskiz.uz SMS Gateway**: Qarzdorlarga avtomatlashtirilgan ogohlantirish xabarlari va to'lov tasdiqlari.
+* **Qonuniy Penya Dvigateli**: Kunlik 0.1% penya hisoblash (asosiy qarzning 50% gacha cheklangan).
+* **Undiruv Quvuri (Collections CRM)**: Ogohlantirish $\rightarrow$ Tarmoqdan uzish $\rightarrow$ Majburiy ijro byurosi (MIB) va Sudga da'vo arizalari tayyorlash.
+
+### 6. ⏱️ Hisoblagichlar & Davlat Qiyoslovi (Gosstandart)
+* **Davlat Qiyoslovi Monitoringi**: Qiyoslov muddati tugashiga 30 kun qolganda tizimda avtomatik xabar berish.
+* **Hisoblagich Almashtirish Dalolatnomasi**: Eski ko'rsatkichni yopish, yangi hisoblagichni plombalash va ro'yxatga olish akti.
+
+### 7. 📊 Tahliliy Boshqaruv & O'zgartirib Bo'lmas Audit
+* **Dashboard KPI**: Real vaqt rejimida tushum, debitorlik, kreditorlik va suv yo'qotishlari (NRW) ko'rsatkichlari.
+* **O'zgartirib Bo'lmas Tranzaksion Audit Log**: PostgreSQL triggerlari orqali har bir to'lov yoki o'zgarish qayd etiladi — hech qanday ma'lumotni o'chirib yoki o'zgartirib bo'lmaydi.
+* **Multi-Tenancy (RLS)**: Bitta serverda barcha tumanlar mutlaqo mustaqil va xavfsiz ajratilgan.
 
 ---
 
-## 🗄️ Database Schema Highlights
+## 🏗️ Arxitektura va Texnologiyalar Steki
 
-The platform schema is designed around high-performance multi-tenancy and audit compliance:
-
-```prisma
-// Excerpt from backend/prisma/schema.prisma
-
-model Tenant {
-  id             String    @id @default(uuid())
-  name           String    // District name (e.g. Uchqo'rg'on, Norin)
-  prefix         String    @unique // Unique regional code
-  inn            String?   // Enterprise STIR
-  vatCode        String?   // 12-digit VAT registry code
-  bankAccount    String?   // 20-digit primary account
-  directorName   String?
-  accountantName String?
-  
-  Abonents       Abonent[]
-  Facilities     Facility[]
-  // ... full schema in backend/prisma/schema.prisma
-}
-
-model Facility {
-  id             String    @id @default(uuid())
-  tenantId       String
-  abonentId      String
-  name           String
-  cadastreNumber String?
-  address        String?
-  ConnectionPoints ConnectionPoint[]
-}
-
-model SanctionLog {
-  id                  String   @id @default(uuid())
-  actNumber           String
-  pipeDiameterMm      Decimal  @db.Decimal(6, 2)
-  calculatedVolumeM3  Decimal  @db.Decimal(14, 3)
-  totalSanctionAmount Decimal  @db.Decimal(14, 2)
-  status              String   @default("ISSUED")
-}
+```
+suvcontrol-core/
+├── backend/
+│   ├── prisma/schema.prisma         # To'liq Multi-Tenant ma'lumotlar bazasi modellari
+│   └── src/
+│       ├── abonent/                 # Aholi va B2B iste'molchilar boshqaruvi
+│       ├── address/                 # Mahalla va ko'cha kadastri
+│       ├── audit/                   # O'zgartirib bo'lmas audit logi
+│       ├── auth/                    # JWT & Role-Based Access Control
+│       ├── billing/                 # Oylik billing run & qayta hisoblash dvigateli
+│       ├── collection/              # Qarzdorlik undiruvi CRM
+│       ├── collector/               # Nazoratchilar va mobil kassa boshqaruvi
+│       ├── meter/                   # Hisoblagichlar va davlat qiyoslovi
+│       ├── payment/                 # Click, Payme, Paynet va Bank kliringi
+│       ├── sms/                     # Eskiz SMS xabarnomalar moduli
+│       ├── tariff/                  # Ijtimoiy va korporativ tariflar matritsasi
+│       └── tenant/                  # Tuman profili va rekvizitlari
+├── frontend/
+│   ├── src/
+│   │   ├── pages/                   # Barcha 13 ta asosiy boshqaruv sahifalari
+│   │   │   ├── Dashboard.tsx        # Markaziy tahliliy boshqaruv paneli
+│   │   │   ├── AbonentCard.tsx      # Aholi (B2C) reestri va filtrlari
+│   │   │   ├── AbonentDetails.tsx   # Abonentning to'liq profili va tarixi
+│   │   │   ├── LegalEntities.tsx    # B2B va byudjet korxonalari boshqaruvi
+│   │   │   ├── Payments.tsx         # Barcha to'lovlar va bank kliringi
+│   │   │   ├── Collectors.tsx       # Nazoratchilar va printer sozlamalari
+│   │   │   ├── Collections.tsx      # Undiruv va MIB/Sud quvuri
+│   │   │   ├── Billing.tsx          # Oylik hisob-kitob va yopish amallari
+│   │   │   ├── Addresses.tsx        # Mahalla va ko'chalar ma'lumotnomasi
+│   │   │   ├── SmsQueue.tsx         # SMS navbati va yuborish jurnali
+│   │   │   ├── TaxReports.tsx       # Soliq hisobotlari
+│   │   │   └── GovernmentReports.tsx# Davlat statistika hisobotlari
+│   │   ├── components/documents/    # Rasmiy hujjatlar (EHF, Akt-sverka, Sanksiya, Pretenziya)
+│   │   └── utils/                   # Didox Excel eksporti va so'm-so'z generatori
+└── docs/
+    ├── ARCHITECTURE.md              # Chuqur texnik arxitektura va RLS modeli
+    └── B2B_SPEC.md                  # Qonunchilik va hisob-kitob qoidalari
 ```
 
 ---
 
-## 🔒 Hackathon Evaluation & Security Notice
+## 🔒 Hakaton Baholash va Maxfiylik Bayonnomasi
 
 > [!NOTE]
-> **Showcase & Architectural Preview**:
-> This repository represents the **architectural blueprint, interface contracts, regulatory math engines, and UI design systems** submitted for hackathon evaluation.
->
-> To safeguard live utility consumers, commercial IP, and active production security:
-> * Active production database credentials, private encryption keys, and SMS gateway tokens have been sanitized or stubbed.
-> * Live automated billing background worker loops and payment provider webhook secrets are isolated in the private production cluster.
-> * A fully operational live deployment is active at **[https://suvcontrol.uz](https://suvcontrol.uz)**.
+> Ushbu repozitoriya loyihaning **arxitekturaviy karkasi, modellar tuzilishi, interfeyslar dizayni va algoritmik yadro qismini** hakamlar baholashi uchun namoyish etadi.
+> 
+> * Loyiha real ishlab turganligi sababli, ishlab chiqarish parollari, jonli to'lov shlyuzlarining shaxsiy kalitlari va server konfiguratsiyalari tozalangan.
+> * Loyihaning to'liq ishlaydigan versiyasi bilan [**suvcontrol.uz**](https://suvcontrol.uz) manzilida tanishish mumkin.
 
 ---
 
-## 👥 Authors & Team
+## 👥 Muallif
 
-* **Abdulloh Munzir** — Lead Architect & Full-Stack Engineer
-* Project: **SuvControl (Water Utility Governance)**
-* Repository: `AbdullohMunzir/suvcontrol-core`
+* **Abdulloh Munzir** — Bosh tizim arxitektori va Full-Stack dasturchi
+* Loyiha: **SuvControl**
+* Repozitoriya: [github.com/AbdullohMunzir/suvcontrol-core](https://github.com/AbdullohMunzir/suvcontrol-core)
