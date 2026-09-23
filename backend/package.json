@@ -1,0 +1,17 @@
+{
+  "name": "suvcontrol-backend-core",
+  "version": "1.0.0-hackathon-preview",
+  "description": "SuvControl Core Architecture — Backend Engine & Data Models",
+  "author": "Abdulloh Munzir",
+  "private": true,
+  "scripts": {
+    "info": "echo 'SuvControl Core Architecture Preview for Hackathon Evaluation'"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@prisma/client": "^5.21.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1"
+  }
+}

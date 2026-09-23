@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+dist/
+build/
+.next/
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# Logs and runtime data
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Database & local backups
+backups/
+*.sql
+*.tar.gz
+*.zip
+
+# OS and Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

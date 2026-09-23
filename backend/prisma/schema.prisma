@@ -1,0 +1,727 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Tenant {
+  id                 String    @id @default(uuid())
+  name               String
+  prefix             String    // For abonent generation e.g. 14242
+  login              String    @unique
+  passwordHash       String
+  status             String    @default("ACTIVE") // ACTIVE, BLOCKED
+  tokenVersion       Int       @default(0)
+  subscriptionEndsAt DateTime?
+  createdAt          DateTime  @default(now())
+
+  clickMerchantId String?
+  clickServiceId  String?
+  clickSecretKey  String?
+  clickAmountDivisor Float? @default(1)
+
+  paynetUsername  String?
+  paynetPassword  String?
+  paynetServiceId String?
+
+  paymeMerchantId String?
+  paymeSecretKey  String?
+
+  // Tashkilot yuridik va bank rekvizitlari (EHF, Akt-sverka, Spravka-raschet uchun)
+  inn             String?   // STIR (INN) - 9 ta raqam
+  vatCode         String?   // QQS registratsiya kodi - 12 ta raqam
+  address         String?   // Yuridik manzil
+  phone           String?   // Telefon raqami
+  email           String?   // Email
+  bankAccount     String?   // 20 xonali talab qilib olinguncha hisobvaraq (20208...)
+  bankName        String?   // Bank nomi (masalan: ATB Agrobank Chust filiali)
+  mfo             String?   // MFO kodi (5 ta raqam)
+  directorName    String?   // Tashkilot rahbari (Direktor) F.I.Sh.
+  accountantName  String?   // Bosh buxgalter F.I.Sh.
+
+
+  Abonents               Abonent[]
+  Meters                 Meter[]
+  Readings               Reading[]
+  Invoices               Invoice[]
+  Payments               Payment[]
+  AuditLogs              AuditLog[]
+  Mahallas               Mahalla[]
+  Streets                Street[]
+  Tariffs                Tariff[]
+  Collectors             Collector[]
+  MeterReplacements      MeterReplacement[]
+  DebtCancellations      DebtCancellation[]
+  Ledgers                Ledger[]
+  PaymentInvoices        PaymentInvoice[]
+  AbonentTariffHistories AbonentTariffHistory[]
+  CollectionActions      CollectionAction[]
+  Notifications          Notification[]
+  TenantPayments         TenantPayment[]
+  BankPayment            BankPayment[]
+  SmsLog                 SmsLog[]
+  PaynetTransactions     PaynetTransaction[]
+  PaymeTransactions      PaymeTransaction[]
+  Facilities             Facility[]
+  ConnectionPoints       ConnectionPoint[]
+  AbonentLimits          AbonentLimit[]
+  SanctionLogs           SanctionLog[]
+  PenyaLogs              PenyaLog[]
+
+  @@map("tenants")
+}
+
+model Tariff {
+  id       String  @id @default(uuid())
+  tenantId String? // If null, global tariff. If set, specific to tenant.
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  category    String // e.g. "Aholi", "Tashkilot"
+  type        String // METERED, NORMATIVE
+  abonentType String   @default("PHYSICAL") // PHYSICAL, LEGAL, BOTH
+  price       Decimal  @db.Decimal(12, 2)
+  startDate   DateTime
+  isArchived  Boolean  @default(false)
+
+  Abonents        Abonent[]
+  TariffHistories AbonentTariffHistory[]
+
+  @@map("tariffs")
+}
+
+model Mahalla {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  name     String
+  Streets  Street[]
+  Abonents Abonent[]
+
+  @@map("mahallas")
+}
+
+model Street {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  mahallaId String
+  mahalla   Mahalla @relation(fields: [mahallaId], references: [id])
+
+  name     String
+  Abonents Abonent[]
+
+  @@map("streets")
+}
+
+model Abonent {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentNumber String // Auto-generated
+  fullName      String
+
+  // New personal details
+  passport      String?
+  birthDate     DateTime?
+  familyMembers Int       @default(1)
+  inn           String? // JSHSHIR / STIR
+  phone         String?
+
+  // Address relations
+  mahallaId String
+  mahalla   Mahalla @relation(fields: [mahallaId], references: [id])
+  streetId  String
+  street    Street  @relation(fields: [streetId], references: [id])
+  house     String // Text input as user requested
+  apartment String?
+  cadastreNumber String?
+
+  type String @default("PHYSICAL") // PHYSICAL, LEGAL
+
+  // B2B (Legal) specific fields
+  legalCategory          String?   @default("COMMERCIAL") // BUDGET, COMMERCIAL, INDUSTRIAL
+  oked                   String?   // 5-digit economic activity code
+  vatPayer               Boolean   @default(false)        // QQS to'lovchisi
+  vatRegCode             String?   // QQS ro'yxat kodi
+  treasuryAccount        String?   // 27-digit treasury account (Byudjet)
+  budgetClassifier       String?   // Xarajatlar iqtisodiy tasnifi
+  advancePaymentPercent  Int?      @default(100)          // Avans foizi (50 yoki 100)
+  hasSewage              Boolean   @default(false)        // Oqova suv (kanalizatsiya) tarmog'iga ulangan
+  sewageRatio            Decimal?  @default(1.0) @db.Decimal(4, 2) // Oqova suv hisob koeffitsiyenti
+  pdkCoefficient         Decimal?  @default(1.0) @db.Decimal(4, 2) // Sanoat ifloslantiruvchi moddalar (ПДК)
+
+  responsiblePerson String?
+  responsiblePhone  String?
+  bankAccount       String?
+  bankName          String?
+  mfo               String?
+
+  contractNumber String
+  contractDate   DateTime
+
+  tariffId String
+  tariff   Tariff @relation(fields: [tariffId], references: [id])
+
+  status          String    @default("PENDING") // PENDING, ACTIVE, SUSPENDED, ARCHIVED, DISCONNECTED
+  archivedAt      DateTime? // When status changed to ARCHIVED or DISCONNECTED
+  balance         Decimal   @default(0) @db.Decimal(12, 2) // > 0 means debt, < 0 means overpayment
+  discountPercent Int       @default(0) // 0 to 100
+
+  createdAt DateTime @default(now())
+
+  // Telegram fields
+  telegramChatId          String?   @unique
+  telegramLinkCode        String?
+  telegramLinkCodeExpires DateTime?
+
+  Meters            Meter[]
+  Invoices          Invoice[]
+  Payments          Payment[]
+  MeterReplacements MeterReplacement[]
+  DebtCancellations DebtCancellation[]
+  Ledgers           Ledger[]
+  TariffHistories   AbonentTariffHistory[]
+  CollectionActions CollectionAction[]
+  BankPayments      BankPayment[]
+  SmsLog            SmsLog[]
+  PaynetTransactions PaynetTransaction[]
+  PaymeTransactions PaymeTransaction[]
+  Facilities        Facility[]
+  ConnectionPoints  ConnectionPoint[]
+  AbonentLimits     AbonentLimit[]
+  SanctionLogs      SanctionLog[]
+  PenyaLogs         PenyaLog[]
+
+  @@unique([tenantId, abonentNumber])
+  @@index([tenantId, abonentNumber])
+  @@index([fullName])
+  @@index([abonentNumber])
+  @@index([contractNumber])
+  @@index([phone])
+  @@index([tenantId, id])
+  @@index([tenantId, status])
+  @@map("abonents")
+}
+
+model Meter {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id])
+
+  number            String
+  model             String?
+  certificateNumber String?
+  installedAt       DateTime
+  checkDate         DateTime
+  status            String    @default("ACTIVE") // ACTIVE, REMOVED, FAULTY
+  lastReading       Decimal   @default(0) @db.Decimal(12, 2)
+  lastReadingDate   DateTime?
+
+  Readings      Reading[]
+  ReplacedAsOld MeterReplacement[] @relation("OldMeter")
+  ReplacedAsNew MeterReplacement[] @relation("NewMeter")
+
+  @@index([tenantId])
+  @@index([abonentId])
+  @@index([tenantId, status])
+  @@map("meters")
+}
+
+model Reading {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  meterId String
+  meter   Meter  @relation(fields: [meterId], references: [id])
+
+  period    String // e.g. "2023-10"
+  value     Decimal  @db.Decimal(12, 2)
+  imageUrl  String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([meterId])
+  @@index([tenantId, period])
+  @@map("readings")
+}
+
+model Invoice {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id])
+
+  period       String // e.g. "2023-10"
+  amount       Decimal @db.Decimal(12, 2)
+  status       String  @default("UNPAID") // UNPAID, PARTIAL, PAID
+  documentType String  @default("REGULAR") // REGULAR, SCHYOT_FAKTURA
+
+  createdAt       DateTime         @default(now())
+  Payments        Payment[]
+  PaymentInvoices PaymentInvoice[]
+
+  @@unique([abonentId, period])
+  @@index([tenantId, id])
+  @@index([tenantId, status])
+  @@map("invoices")
+}
+
+model Payment {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id])
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+
+  collectorId String?
+  collector   Collector? @relation(fields: [collectorId], references: [id])
+
+  amount        Decimal  @db.Decimal(12, 2)
+  date          DateTime @default(now())
+  receiptNumber String
+  comment       String?
+  status        String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, CANCELLED
+  paymentMethod String   @default("CASH") // CASH, BANK, CLICK, PAYNET
+
+  PaymentInvoices PaymentInvoice[]
+  PaynetTransaction PaynetTransaction?
+  PaymeTransaction  PaymeTransaction?
+
+  @@index([tenantId, id])
+  @@index([tenantId, status])
+  @@map("payments")
+}
+
+model BankPayment {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  date      DateTime
+  payerName String
+  payerInn  String?
+  amount    Decimal  @db.Decimal(12, 2)
+  comment   String?
+
+  suggestedAbonentId String?
+  suggestedAbonent   Abonent? @relation(fields: [suggestedAbonentId], references: [id])
+
+  status    String   @default("PENDING") // PENDING, CONFIRMED, REJECTED
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, status])
+  @@map("bank_payments")
+}
+
+model AuditLog {
+  id       String  @id @default(uuid())
+  tenantId String? // Can be null if superadmin action
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  actionType  String
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, actionType])
+  @@map("audit_logs")
+}
+
+model Collector {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  fullName       String
+  phone          String
+  login          String  @unique
+  passwordHash   String
+  status         String  @default("ACTIVE") // ACTIVE, INACTIVE
+  printerEnabled Boolean @default(true)
+  tokenVersion   Int     @default(0)
+  telegramChatId String? @unique
+
+  createdAt DateTime @default(now())
+
+  Payments Payment[]
+
+  @@map("collectors")
+}
+
+model MeterReplacement {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id])
+
+  oldMeterId String
+  oldMeter   Meter  @relation("OldMeter", fields: [oldMeterId], references: [id])
+
+  newMeterId String?
+  newMeter   Meter?  @relation("NewMeter", fields: [newMeterId], references: [id])
+
+  actNumber            String
+  actDate              DateTime
+  oldMeterFinalReading Decimal  @db.Decimal(12, 2)
+  reason               String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([oldMeterId])
+  @@index([newMeterId])
+  @@index([abonentId])
+  @@map("meter_replacements")
+}
+
+model DebtCancellation {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id])
+
+  actNumber   String
+  actDate     DateTime
+  amount      Decimal  @db.Decimal(12, 2)
+  reason      String
+  actImageUrl String
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([abonentId])
+  @@map("debt_cancellations")
+}
+
+model Ledger {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id])
+
+  type        String // DEBIT, CREDIT
+  amount      Decimal  @db.Decimal(12, 2)
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([abonentId])
+  @@map("ledgers")
+}
+
+model PaymentInvoice {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id])
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+
+  @@map("payment_invoices")
+}
+
+model AbonentTariffHistory {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id])
+
+  tariffId String
+  tariff   Tariff @relation(fields: [tariffId], references: [id])
+
+  startDate DateTime
+
+  @@map("abonent_tariff_history")
+}
+
+model BillingRun {
+  id            String    @id @default(uuid())
+  period        String // e.g. "2026-07"
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+  status        String // SUCCESS, PARTIAL, FAILED
+  tenantResults Json // { tenantId, count, error }
+
+  @@map("billing_runs")
+}
+
+model CollectionAction {
+  id        String  @id @default(uuid())
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id])
+
+  actionType String // SMS, TELEGRAM, CALL, VISIT, WARNING, COURT
+  notes      String?
+  createdAt  DateTime @default(now())
+  createdBy  String?
+
+  @@index([tenantId, abonentId])
+  @@map("collection_actions")
+}
+
+model Notification {
+  id       String  @id @default(uuid())
+  tenantId String? // Null means system-wide/superadmin broadcast
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String // SYSTEM, ADMIN_BROADCAST
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("notifications")
+}
+
+model TenantPayment {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  amount      Decimal  @db.Decimal(12, 2)
+  paymentDate DateTime @default(now())
+  months      Int // How many months they paid for
+  comment     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("tenant_payments")
+}
+
+model SmsLog {
+  id          String    @id @default(uuid())
+  abonentId   String
+  tenantId    String
+  phoneNumber String
+  message     String
+  eventType   String // 'NEW_ABONENT', 'PAYMENT_CONFIRMED', 'DEBT_ALERT'
+  status      String // 'PENDING', 'SENT', 'DELIVERED', 'FAILED', 'CANCELLED'
+  errorReason String?
+  externalId  String? // To store Eskiz ID or UUID
+  approvedBy  String? // operator ID who approved
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  abonent Abonent @relation(fields: [abonentId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("sms_logs")
+}
+
+model PaynetTransaction {
+  id             Int       @id @default(autoincrement()) // providerTrnId
+  paynetTrnId    String    @unique // Paynet's transactionId
+  abonentId      String
+  abonent        Abonent   @relation(fields: [abonentId], references: [id])
+  paymentId      String?   @unique
+  payment        Payment?  @relation(fields: [paymentId], references: [id])
+  amount         Decimal   @db.Decimal(12, 2)
+  status         Int       @default(1) // 1: SUCCESS, 2: CANCELLED, 3: NOT_FOUND
+  performTime    DateTime  @default(now())
+  cancelTime     DateTime?
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([paynetTrnId])
+  @@index([paymentId])
+  @@map("paynet_transactions")
+}
+
+model PaymeTransaction {
+  id             String   @id @default(uuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  paymeTransId   String   @unique
+  time           BigInt
+  amount         Decimal  @db.Decimal(12, 2)
+  state          Int
+  createTime     BigInt
+  performTime    BigInt?
+  cancelTime     BigInt?
+  reason         Int?
+  paymentId      String?  @unique
+  payment        Payment? @relation(fields: [paymentId], references: [id])
+  abonentId      String
+  abonent        Abonent  @relation(fields: [abonentId], references: [id])
+
+  @@index([tenantId])
+  @@index([paymeTransId])
+  @@map("payme_transactions")
+}
+
+model Facility {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id], onDelete: Cascade)
+
+  name              String
+  code              String?
+  cadastreNumber    String?
+  address           String?
+  responsiblePerson String?
+  responsiblePhone  String?
+
+  createdAt DateTime @default(now())
+
+  ConnectionPoints ConnectionPoint[]
+  AbonentLimits    AbonentLimit[]
+
+  @@index([tenantId])
+  @@index([abonentId])
+  @@map("facilities")
+}
+
+model ConnectionPoint {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id], onDelete: Cascade)
+
+  facilityId String?
+  facility   Facility? @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  name              String   @default("Bosh kirish quvuri")
+  pipeDiameterMm    Decimal  @db.Decimal(6, 2) // mm (e.g. 15, 20, 25, 32, 50, 100)
+  waterPressureBar  Decimal? @default(2.5) @db.Decimal(4, 2)
+  hasSewage         Boolean  @default(false)
+  sewageRatio       Decimal  @default(1.0) @db.Decimal(4, 2)
+  status            String   @default("ACTIVE") // ACTIVE, SEALED, DISCONNECTED
+
+  createdAt DateTime @default(now())
+
+  SanctionLogs SanctionLog[]
+
+  @@index([tenantId])
+  @@index([abonentId])
+  @@index([facilityId])
+  @@map("connection_points")
+}
+
+model AbonentLimit {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id], onDelete: Cascade)
+
+  facilityId String?
+  facility   Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+
+  year             Int
+  period           String?  // "YEAR" or "2026-09"
+  volumeLimitM3    Decimal  @db.Decimal(14, 3)
+  amountLimitUzs   Decimal  @db.Decimal(14, 2)
+  actualVolumeM3   Decimal  @default(0) @db.Decimal(14, 3)
+  actualAmountUzs  Decimal  @default(0) @db.Decimal(14, 2)
+  warningThreshold Int      @default(80) // 80%
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([abonentId])
+  @@index([year])
+  @@map("abonent_limits")
+}
+
+model SanctionLog {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id], onDelete: Cascade)
+
+  connectionPointId String?
+  connectionPoint   ConnectionPoint? @relation(fields: [connectionPointId], references: [id], onDelete: SetNull)
+
+  actNumber            String
+  actDate              DateTime
+  reason               String
+  pipeDiameterMm       Decimal  @db.Decimal(6, 2)
+  assumedVelocityMps   Decimal  @default(1.2) @db.Decimal(4, 2)
+  durationHours        Int
+  calculatedVolumeM3   Decimal  @db.Decimal(14, 3)
+  tariffPrice          Decimal  @db.Decimal(12, 2)
+  vatRate              Decimal  @default(0.12) @db.Decimal(4, 2)
+  vatAmount            Decimal  @db.Decimal(12, 2)
+  totalSanctionAmount  Decimal  @db.Decimal(14, 2)
+  inspectorName        String?
+  status               String   @default("ISSUED") // ISSUED, PAID, CANCELLED
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([abonentId])
+  @@index([actNumber])
+  @@map("sanction_logs")
+}
+
+model PenyaLog {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  abonentId String
+  abonent   Abonent @relation(fields: [abonentId], references: [id], onDelete: Cascade)
+
+  calculationDate    DateTime @default(now())
+  overdueDebtAmount  Decimal  @db.Decimal(14, 2)
+  daysOverdue        Int
+  dailyRate          Decimal  @default(0.001) @db.Decimal(6, 4) // 0.1% / kun
+  accruedPenyaAmount Decimal  @db.Decimal(14, 2)
+  maxCapLimit        Decimal  @db.Decimal(14, 2) // max 50%
+  isCapped           Boolean  @default(false)
+  status             String   @default("ACCRUED") // ACCRUED, PAID, WAIVED
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([abonentId])
+  @@map("penya_logs")
+}
+

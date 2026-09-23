@@ -1,0 +1,18 @@
+{
+  "name": "suvcontrol-frontend-core",
+  "version": "1.0.0-hackathon-preview",
+  "description": "SuvControl Core Architecture — Modern UI Components & Official Document Engines",
+  "author": "Abdulloh Munzir",
+  "private": true,
+  "scripts": {
+    "info": "echo 'SuvControl Frontend Core Architecture Preview for Hackathon Evaluation'"
+  },
+  "dependencies": {
+    "antd": "^5.21.0",
+    "dayjs": "^1.11.13",
+    "lucide-react": "^0.460.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5"
+  }
+}
